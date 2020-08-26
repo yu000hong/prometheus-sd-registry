@@ -1,0 +1,32 @@
+spring:
+    application:
+        name: prometheus-sd-registry
+
+server:
+    port: 8868
+    tomcat:
+        basedir: tomcat
+        accesslog:
+            enabled: true
+        max-threads: 5
+    error:
+        include-exception: true
+        include-stacktrace: always
+
+management:
+    endpoints:
+        web:
+            exposure:
+                include: "*"
+    endpoint:
+        health:
+            show-details: always
+    metrics:
+        tags:
+            application: ${spring.application.name}
+
+zookeeper:
+    prefix: /serversets/
+    port: 2181
+    servers: 127.0.0.1, 127.0.0.1, 127.0.0.1
+

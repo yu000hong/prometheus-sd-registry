@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    6个优先级从高到低依次为：OFF、FATAL、ERROR、WARN、INFO、DEBUG、TRACE、 ALL。
+    如果设置优先级为WARN，那么OFF、FATAL、ERROR、WARN 4个级别的log能正常输出
+    设置为OFF 表示不记录log4j2本身的日志，
+ -->
+
+<!-- status：用来指定log4j本身的打印日志级别,monitorInterval:指定log4j自动重新配置的监测间隔时间 -->
+<configuration status="INFO" monitorInterval="30" packages="com.yu000hong.psdregistry">
+    <properties>
+        <property name="Pattern">%d{yyyy-MM-dd HH:mm:ss.SSS}\t%level\t%c\t%C:%L\t%msg%n</property>
+    </properties>
+    <appenders>
+        <Console name="Console" target="SYSTEM_OUT">
+            <ThresholdFilter level="ALL" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout>
+                <charset>UTF-8</charset>
+                <Pattern>${Pattern}</Pattern>
+            </PatternLayout>
+        </Console>
+        <RollingFile name="Log" immediateFlush="false"
+            fileName="logs/registry.log"
+            filePattern="logs/registry-%d{yyyyMMdd}.log.gz">
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="ACCEPT"/>
+            <PatternLayout alwaysWriteExceptions="true">
+                <charset>UTF-8</charset>
+                <Pattern>${Pattern}</Pattern>
+            </PatternLayout>
+            <CronTriggeringPolicy evaluateOnStartup="true" schedule="0 0 0 * * ?"/>
+            <DefaultRolloverStrategy>
+                <Delete basePath="logs" maxDepth="2">
+                    <IfFileName glob="registry-*.log.gz"/>
+                    <IfLastModified age="10d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingFile>
+        <Async name="AsyncLog" includeLocation="true">
+            <AppenderRef ref="Log"/>
+        </Async>
+    </appenders>
+    <loggers>
+        <root level="INFO">
+            <appender-ref ref="Console"/>
+            <appender-ref ref="AsyncLog"/>
+        </root>
+    </loggers>
+</configuration>
