@@ -8,14 +8,14 @@ import com.twitter.finagle.common.zookeeper.ServerSet.UpdateException;
 import com.twitter.finagle.common.zookeeper.ServerSetImpl;
 import com.twitter.finagle.common.zookeeper.ZooKeeperClient;
 import com.twitter.util.Duration;
+
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -43,28 +43,6 @@ public class Registry {
         this.servers = new ConcurrentHashMap<>(64);
     }
 
-    public void register(String service, String host, int port) {
-        String key = genKey(service, host, port);
-        if (servers.containsKey(key)) {
-            return;
-        }
-        Server server = new Server(service, host, port);
-        server.register();
-        if (servers.putIfAbsent(key, server) != null) {
-            server.unregister();
-        }
-    }
-
-    public void unregister(String service, String host, int port) {
-        String key = genKey(service, host, port);
-        Server server = servers.get(key);
-        if (server != null) {
-            servers.remove(key);
-            server.unregister();
-        }
-    }
-
-
     @Scheduled(fixedRate = 10000)
     public void check() {
         Map<String, Server> cloneServers = new HashMap<>(servers);
@@ -87,6 +65,31 @@ public class Registry {
         }
     }
 
+    public List<Server> getServers(){
+        return new ArrayList<>(servers.values());
+    }
+
+    public void register(String service, String host, int port) {
+        String key = genKey(service, host, port);
+        if (servers.containsKey(key)) {
+            return;
+        }
+        Server server = new Server(service, host, port);
+        server.register();
+        if (servers.putIfAbsent(key, server) != null) {
+            server.unregister();
+        }
+    }
+
+    public void unregister(String service, String host, int port) {
+        String key = genKey(service, host, port);
+        Server server = servers.get(key);
+        if (server != null) {
+            servers.remove(key);
+            server.unregister();
+        }
+    }
+
     private String genKey(String service, String host, int port) {
         return service + ":" + host + ":" + port;
     }
@@ -102,8 +105,7 @@ public class Registry {
         }
     }
 
-    private class Server {
-
+    public class Server {
         private final String service;
         private final String host;
         private final int port;
@@ -116,6 +118,18 @@ public class Registry {
             this.port = port;
         }
 
+        public String getService() {
+            return service;
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public int getPort() {
+            return port;
+        }
+
         private void register() {
             if (status != null) {
                 return;
@@ -124,8 +138,8 @@ public class Registry {
                 .map(host -> new InetSocketAddress(host, zkPort))
                 .collect(Collectors.toList());
             try {
-                client = new ZooKeeperClient(Duration.apply(1000, MILLISECONDS), addresses);
-                ServerSet serverSet = new ServerSetImpl(client, zkPrefix + service);
+                client = new ZooKeeperClient(Duration.apply(5000, MILLISECONDS), addresses);
+                ServerSet serverSet = new ServerSetImpl(client, zkPrefix + "/" + service);
                 status = serverSet.join(new InetSocketAddress(host, port), new HashMap<>(0));
             } catch (Exception e) {
                 log.error(e.getMessage(), e);

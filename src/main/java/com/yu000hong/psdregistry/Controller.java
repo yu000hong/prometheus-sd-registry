@@ -1,6 +1,8 @@
 package com.yu000hong.psdregistry;
 
 import com.google.common.collect.ImmutableMap;
+
+import java.util.List;
 import java.util.Map;
 import javax.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,12 @@ public class Controller {
         @RequestParam("port") int port) {
         registry.unregister(service, host, port);
         return ImmutableMap.of("code", 0, "msg", "success");
+    }
+
+    @PostMapping("/servers")
+    public Map servers() {
+        List<Registry.Server> servers = registry.getServers();
+        return ImmutableMap.of("code", 0, "msg", "success", "data", servers);
     }
 
 }
